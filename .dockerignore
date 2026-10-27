@@ -1,0 +1,8 @@
+.venv
+.git
+.env
+blitzrank_outputs
+.cache
+*.pdf
+uv.lock
+private

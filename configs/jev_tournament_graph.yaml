@@ -1,0 +1,30 @@
+# One benchmark, one oracle; rerun other configs by overriding with --set:
+#   Jev (this file):  python -m blitzrank.engine.run configs/jev_tournament_graph.yaml
+#   LLM listwise:     python -m blitzrank.engine.run configs/jev_tournament_graph.yaml \
+#                       --set reranking.comparer.type=listwise_rank_gpt \
+#                       --set reranking.comparer.model=openai/gpt-4.1
+#   Jev k10:          python -m blitzrank.engine.run configs/jev_tournament_graph.yaml \
+#                       --set reranking.selector.window_size=10
+dataset:
+  type: online_bm25
+  name: dl19-passage
+  index: msmarco-v1-passage
+  k: 100
+evaluation:
+  type: trec_eval
+  metrics: [ndcg_cut_10, map]
+logging:
+  output_dir: blitzrank_outputs
+  experiment_name: jev_tournament_graph
+  enable_wandb: false
+reranking:
+  max_parallel_requests: 5
+  selector:
+    type: tournament_graph
+    window_size: 20
+    top_m: 10
+  comparer:
+    type: jev_api
+    model: jev-latest
+    max_doc_tokens: 1024
+    max_query_tokens: 1024

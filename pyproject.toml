@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "litellm>=1.50.0",
+    "litellm>=1.50.0,<1.107.0",  # 1.107.0 was compromised (BerriAI/litellm#47826); unpin once a clean post-mortem release is out
     "httpx>=0.24.0",
     "tiktoken>=0.5.0",
     "loguru>=0.7.0",
@@ -22,13 +22,15 @@ dependencies = [
     "datasets>=2.14.0",
     "orjson>=3.9.0",
     "pytrec-eval>=0.5",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
 all = [
-    "torch>=2.0.0",
     "trueskill>=0.4.5",
     "scipy>=1.10.0",
+    "pyserini>=0.39.0,<0.44",
+    "torch>=2.0.0",
 ]
 
 [tool.setuptools.packages.find]

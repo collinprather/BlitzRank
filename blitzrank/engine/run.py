@@ -45,6 +45,8 @@ def _evaluate_and_log_metrics(
     if metrics:
         if extra_metrics:
             metrics.update(extra_metrics)
+        if isinstance(dataset, dict) and "results" in dataset:
+            metrics["num_queries"] = len(dataset["results"])
         logger.log_metrics(metrics)
 
 

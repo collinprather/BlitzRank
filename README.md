@@ -30,13 +30,8 @@ cd BlitzRank
 uv pip install -e .
 ```
 
-Install with additional dependencies for baselines (AcuRank, TourRank):
-
-```bash
-uv pip install "blitzrank[all]"
-# or from source:
-uv pip install -e ".[all]"
-```
+For benchmark runs, use the Docker workflow below. It includes the optional
+retrieval and baseline dependencies.
 
 ## Quick Start
 
@@ -96,6 +91,72 @@ for Method in [BlitzRank, SlidingWindow, SetWise, PairWise, TourRank, AcuRank]:
 ```
 
 Available methods: `BlitzRank`, `SlidingWindow`, `SetWise`, `PairWise`, `TourRank`, `AcuRank`
+
+### Decision models (TypeSafe Jev)
+
+Jev (https://docs.typesafe.ai) is a "System One" decision model: instead of
+generating text to parse, it answers typed questions against a `state` in one
+API call and returns structured choices with probabilities. `BlitzRank`
+(tournament graph, one Jev call per window deciding all C(k,2) pairs at once)
+and `PairWise` support it:
+
+```python
+import os
+os.environ["TYPESAFE_API_KEY"] = "..."  # from https://console.typesafe.ai/keys
+
+from blitzrank import BlitzRank, PairWise, evaluate
+from blitzrank.engine.config import ComparerType
+
+rankings, metrics = evaluate(
+    BlitzRank(window_size=20, comparer_type=ComparerType.JEV_API),
+    dataset="msmarco/dl19/bm25", model="jev-latest",
+)
+```
+
+`PairWise(comparer_type=ComparerType.JEV_API)` runs the same decision model
+through the drop-in pairwise path; both keep the standard token/latency stats.
+
+### Docker benchmark workflow
+
+Docker provides the benchmark dependencies, including Java for Pyserini. Create
+a `.env` file in the repository root with the API keys for the runs you intend
+to make (`TYPESAFE_API_KEY` for Jev; `OPENAI_API_KEY` for the GPT baseline).
+The file is used at runtime and is excluded from the Docker build context.
+
+```bash
+docker build -t blitzrank .
+
+# Run the Jev benchmark on TREC-DL19. Caches and results stay on the host.
+docker run --rm --env-file .env \
+  -v "$PWD/.cache/pyserini:/root/.cache/pyserini" \
+  -v "$PWD/.cache/datasets:/app/.cache/datasets" \
+  -v ./blitzrank_outputs:/app/blitzrank_outputs \
+  blitzrank python -m blitzrank.engine.run configs/jev_tournament_graph.yaml
+
+# Run the Jev and GPT-6 Luna sweeps on all 8 BEIR benchmarks.
+bash scripts/run_beir_grid.sh docker
+```
+
+### Inspect a single query end-to-end
+
+`scripts/demo_jev_query.py` runs the Jev-based BlitzRank (tournament graph,
+window size 20) on **one query** from the cached BM25 hits and prints everything:
+each round's window, pairwise decisions, and token usage, then the final top-k
+with BM25 rank, docid, and a snippet. It needs a BM25 hit cache, which any
+benchmark run produces (e.g. `configs/jev_tournament_graph.yaml` above or
+`scripts/run_beir_grid.sh`):
+
+```bash
+docker run --rm --env-file .env \
+  -v "$PWD/.cache/datasets:/app/.cache/datasets" \
+  blitzrank python scripts/demo_jev_query.py --topk 5
+```
+
+Options: `--name`/`--index` (dataset + pyserini index, default
+`dl19-passage`/`msmarco-v1-passage`), `--k` (BM25 depth, must match the cache),
+`--topk`, `--window-size`, and `--model`. The demo uses the first cached query
+by default. Docids are the BM25 hit docids, so you can cross-check the top-k
+against qrels.
 
 📖 [Full parameter reference →](docs/parameters.md)
 
