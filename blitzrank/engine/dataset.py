@@ -1,6 +1,7 @@
 from typing import Dict, Any
 
 import hashlib
+import re
 import numpy as np
 import requests
 import datasets
@@ -212,6 +213,38 @@ def _load_dlhard_results_qrels():
     return results, qrels
 
 
+ANSERINI_TOOLS_BASE = "https://raw.githubusercontent.com/castorini/anserini-tools/master"
+
+
+def _fetch_anserini_topic_or_qrels(fn, name: str):
+    """Resolve `fn(name)` (pyserini.get_topics/get_qrels), hydrating Anserini's
+    local cache when its fatjar-bundled downloader 404s: pyserini<0.44 fetches
+    from the pre-restructure anserini-tools layout (topics-and-qrels/) while
+    upstream moved files into topics/ and qrels/. Anserini checks
+    ~/.cache/pyserini/topics-and-qrels first, so we fetch the same filename
+    from the new layout there."""
+    try:
+        return fn(name)
+    except Exception as e:
+        match = re.search(r"topics-and-qrels/([\w.\-]+)", str(e))
+        if match is None:
+            raise
+        filename = match.group(1)
+        subdir = "topics" if filename.startswith("topics.") else "qrels"
+        cache_dir = Path.home() / ".cache" / "pyserini" / "topics-and-qrels"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        path = cache_dir / filename
+        if not path.exists():
+            response = requests.get(f"{ANSERINI_TOOLS_BASE}/{subdir}/{filename}")
+            if response.status_code != 200:
+                raise RuntimeError(
+                    f"Anserini could not fetch {filename}; upstream layout moved "
+                    f"and {response.status_code} at new path too"
+                ) from e
+            path.write_bytes(response.content)
+        return fn(name)
+
+
 def run_retriever(topics, searcher, qrels=None, k=100, qid=None):
     ranks = []
     if isinstance(topics, str):
@@ -373,14 +406,19 @@ def load_dataset(config: DatasetConfig, logger) -> Dict[str, Any]:
 
         logger.info(f"Loading dataset: {config.name} with index: {config.index}")
         searcher = LuceneSearcher.from_prebuilt_index(config.index)
+        if searcher is None:
+            raise ValueError(
+                f"Could not download prebuilt index {config.index!r} from any mirror "
+                f"(transient network failure — rerun to retry)"
+            )
         if config.name == "dl_hard-passage":
             results, qrels = _load_dlhard_results_qrels()
         else:
             if config.name in ["dl21-passage", "dl22-passage", "dl23-passage"]:
-                topics = get_topics(config.name.split("-")[0])
+                topics = _fetch_anserini_topic_or_qrels(get_topics, config.name.split("-")[0])
             else:
-                topics = get_topics(config.name)
-            qrels = get_qrels(config.name)
+                topics = _fetch_anserini_topic_or_qrels(get_topics, config.name)
+            qrels = _fetch_anserini_topic_or_qrels(get_qrels, config.name)
             results = run_retriever(topics, searcher, qrels, k=config.k)
         logger.info(f"Loaded {len(results)} queries")
 
