@@ -18,6 +18,7 @@ rankings, metrics = evaluate(ranker, dataset="msmarco/dl19/bm25", model="openai/
 |-----------|------|---------|-------------|
 | `window_size` | `int` | `20` | Maximum number of documents per LLM call |
 | `top_m` | `int` | `10` | Number of top documents to identify |
+| `comparer_type` | `ComparerType` | `LISTWISE_RANK_GPT` | Comparer backend; use `JEV_API` for the TypeSafe Jev decision model (requires `TYPESAFE_API_KEY`, model `"jev-latest"`) |
 
 ---
 
@@ -48,6 +49,7 @@ rankings, metrics = evaluate(ranker, dataset="msmarco/dl19/bm25", model="openai/
 |-----------|------|---------|-------------|
 | `sorting_method` | `str` | `"heapsort"` | Sorting algorithm: `"heapsort"`, `"bubblesort"`, or `"allpair"` |
 | `top_m` | `int` | `10` | Number of top documents to identify |
+| `comparer_type` | `ComparerType` | `PAIRWISE` | Comparer backend; use `JEV_API` for the TypeSafe Jev decision model (requires `TYPESAFE_API_KEY`, model `"jev-latest"`) |
 
 ---
 

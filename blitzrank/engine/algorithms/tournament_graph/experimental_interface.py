@@ -108,9 +108,13 @@ async def tournament_graph_rerank_dataset_from_config(
     logger,
     output_dir: Path,
 ) -> Dict[str, Any]:
-    if reranking_config.comparer.type != ComparerType.LISTWISE_RANK_GPT:
+    if reranking_config.comparer.type not in (
+        ComparerType.LISTWISE_RANK_GPT, ComparerType.JEV_API,
+    ):
         raise ValueError(
-            f"Tournament graph reranking only supports comparer.type == {ComparerType.LISTWISE_RANK_GPT}"
+            "Tournament graph reranking only supports comparers "
+            f"{(ComparerType.LISTWISE_RANK_GPT, ComparerType.JEV_API)}, "
+            f"got {reranking_config.comparer.type}"
         )
     return await tournament_graph_rerank_dataset(
         dataset_raw, reranking_config, logger, output_dir
@@ -136,9 +140,15 @@ async def tournament_graph_rerank_dataset(
     ]
 
     async def process_item(task, idx, _checkpoint_entry, _checkpoint_writer):
-        oracle = LLMCompareOracle(
-            reranking_config.selector.window_size, reranking_config.comparer
-        )
+        if reranking_config.comparer.type == ComparerType.JEV_API:
+            from .jev_oracle import JevWindowOracle
+            oracle = JevWindowOracle(
+                reranking_config.selector.window_size, reranking_config.comparer
+            )
+        else:
+            oracle = LLMCompareOracle(
+                reranking_config.selector.window_size, reranking_config.comparer
+            )
         task_config = TournamentGraphRerankConfig(
             top_m=reranking_config.selector.top_m,
             oracle=oracle,

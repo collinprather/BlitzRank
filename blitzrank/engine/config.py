@@ -9,6 +9,7 @@ class ComparerType(Enum):
     SETWISE = "setwise"
     PAIRWISE = "pairwise"
     CTXL_API = "ctxl_api"
+    JEV_API = "jev_api"
 
 
 @dataclass
@@ -182,7 +183,13 @@ class Config:
                 "pairwise",
             ]:
                 raise ValueError(f"Unknown selector type: {reranking.selector.type}")
-            if reranking.comparer.type not in [ComparerType.LISTWISE_RANK_GPT, ComparerType.SETWISE, ComparerType.PAIRWISE, ComparerType.CTXL_API]:
+            if reranking.comparer.type not in [
+                ComparerType.LISTWISE_RANK_GPT,
+                ComparerType.SETWISE,
+                ComparerType.PAIRWISE,
+                ComparerType.CTXL_API,
+                ComparerType.JEV_API,
+            ]:
                 raise ValueError(f"Unknown comparer type: {reranking.comparer.type}")
             if (
                 not isinstance(reranking.max_parallel_requests, int)

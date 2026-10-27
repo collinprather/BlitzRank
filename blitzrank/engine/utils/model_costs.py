@@ -60,6 +60,26 @@ MODEL_COSTS = {
         "input_cost_per_token": 1.25 / 1e6,  # $1.25 per million tokens
         "output_cost_per_token": 5.0 / 1e6,  # $5.00 per million tokens
     },
+    "openai/gpt-6-luna": {  # https://openai.com/business/pricing/#api
+        "input_cost_per_token": 0.10 / 1e6,  # $0.10 per million tokens
+        "output_cost_per_token": 0.50 / 1e6,  # $0.50 per million tokens
+    },
+    "openai/gpt-4.1": {  # https://platform.openai.com/docs/pricing
+        "input_cost_per_token": 2.0 / 1e6,  # $2.00 per million tokens
+        "output_cost_per_token": 8.0 / 1e6,  # $8.00 per million tokens
+    },
+    "jev-latest": {  # https://docs.typesafe.ai/models (alias for jev-1.13.0)
+        "input_cost_per_token": 0.042 / 1e6,  # $0.042 per million tokens
+        "output_cost_per_token": 0.0,  # output tokens are free
+    },
+    "jev-1.13.0": {  # pinned version of jev-latest; same pricing
+        "input_cost_per_token": 0.042 / 1e6,
+        "output_cost_per_token": 0.0,
+    },
+    "jev-1.14.0": {  # pinned preview version; same pricing
+        "input_cost_per_token": 0.042 / 1e6,
+        "output_cost_per_token": 0.0,
+    },
 }
 
 

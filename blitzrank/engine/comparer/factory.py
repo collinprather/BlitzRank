@@ -8,6 +8,7 @@ from .setwise import SetwiseComparer
 from .pairwise import PairwiseComparer
 from .listwise_rank_gpt import ListwiseRankGptComparer
 from .ctxl_api import CtxlApiComparer
+from .jev_api import JevApiComparer
 
 if TYPE_CHECKING:
     from ..config import ComparerConfig
@@ -42,6 +43,12 @@ def create_comparer(config: "ComparerConfig") -> BaseComparer:
         )
     elif config.type == ComparerType.CTXL_API:
         return CtxlApiComparer(
+            model=config.model,
+            max_doc_tokens=config.max_doc_tokens,
+            max_query_tokens=config.max_query_tokens,
+        )
+    elif config.type == ComparerType.JEV_API:
+        return JevApiComparer(
             model=config.model,
             max_doc_tokens=config.max_doc_tokens,
             max_query_tokens=config.max_query_tokens,

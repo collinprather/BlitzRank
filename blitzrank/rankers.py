@@ -55,17 +55,24 @@ def _make_task(query, docs):
 
 
 class BlitzRank(Ranker):
-    def __init__(self, window_size: int = 20, top_m: int = 10):
+    def __init__(self, window_size: int = 20, top_m: int = 10,
+                 comparer_type: ComparerType = ComparerType.LISTWISE_RANK_GPT):
         self.window_size = window_size
         self.top_m = top_m
+        self.comparer_type = comparer_type
 
     async def __call__(self, query, docs, topk, model):
         from .engine.algorithms.tournament_graph.experimental_interface import (
             rerank_with_tournament_graph, RerankTask, SingleContent,
             LLMCompareOracle, TournamentGraphRerankConfig,
         )
+        from .engine.algorithms.tournament_graph.jev_oracle import JevWindowOracle
         ws = min(self.window_size, len(docs))
-        oracle = LLMCompareOracle(ws, ComparerConfig(type=ComparerType.LISTWISE_RANK_GPT, model=model))
+        comparer_config = ComparerConfig(type=self.comparer_type, model=model)
+        if self.comparer_type == ComparerType.JEV_API:
+            oracle = JevWindowOracle(ws, comparer_config)
+        else:
+            oracle = LLMCompareOracle(ws, comparer_config)
         hits = _make_hits(docs)
         contents = [
             SingleContent(content=d, qid="0", docid=str(i), rank=i + 1, score=len(docs) - i, orig_idx=i)
@@ -82,7 +89,7 @@ class BlitzRank(Ranker):
     def _build_reranking_config(self, model):
         return RerankingConfig(
             selector=SelectorConfig(type="tournament_graph", window_size=self.window_size, top_m=self.top_m),
-            comparer=ComparerConfig(type=ComparerType.LISTWISE_RANK_GPT, model=model),
+            comparer=ComparerConfig(type=self.comparer_type, model=model),
         )
 
 
@@ -142,15 +149,17 @@ class SetWise(Ranker):
 
 
 class PairWise(Ranker):
-    def __init__(self, sorting_method: str = "heapsort", top_m: int = 10):
+    def __init__(self, sorting_method: str = "heapsort", top_m: int = 10,
+                 comparer_type: ComparerType = ComparerType.PAIRWISE):
         self.sorting_method = sorting_method
         self.top_m = top_m
+        self.comparer_type = comparer_type
 
     async def __call__(self, query, docs, topk, model):
         from .engine.algorithms.setwise_pairwise_selectors import (
             pairwise_heapsort, pairwise_bubblesort, pairwise_allpair, PairwiseConfig,
         )
-        comparer = create_comparer(ComparerConfig(type=ComparerType.PAIRWISE, model=model))
+        comparer = create_comparer(ComparerConfig(type=self.comparer_type, model=model))
         config = PairwiseConfig(top_m=min(topk, len(docs)), method=self.sorting_method)
         fn = {"heapsort": pairwise_heapsort, "bubblesort": pairwise_bubblesort, "allpair": pairwise_allpair}[self.sorting_method]
         result, logs = await fn(_make_task(query, docs), comparer, config)
@@ -162,7 +171,7 @@ class PairWise(Ranker):
             selector=SelectorConfig(
                 type="pairwise", sorting_method=self.sorting_method, top_m=self.top_m,
             ),
-            comparer=ComparerConfig(type=ComparerType.PAIRWISE, model=model),
+            comparer=ComparerConfig(type=self.comparer_type, model=model),
         )
 
 
